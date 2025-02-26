@@ -1,0 +1,58 @@
+schemaVersion: 2.2.2
+metadata:
+  name: camel-with-quarkus  # Name of developers choice
+components:
+  - name: tools      # Name of developers choice
+    container:
+      image: registry.redhat.io/devspaces/udi-rhel9:latest   # Universal developer image - provides tools to run source code. Get details of this image from https://catalog.redhat.com/search?gs&q=devspaces/udi
+      env:
+        - name: QUARKUS_HTTP_HOST  # Default quarkus Environment variables
+          value: 0.0.0.0           # Set any IP as Source
+      endpoints:  # List of ports to expose
+        - exposure: none
+          name: debug
+          protocol: tcp
+          targetPort: 5005     # Debug port quarkus used by default
+        - exposure: public
+          name: hello
+          protocol: https      # Since devspaces uses https - Keep protocol as https
+          targetPort: 8080     # Port of quarkus configured in properties 
+          path: /hello         # Endpoint from code
+      volumeMounts:            # Mount the volumes configured to the specific folder 
+        - name: m2
+          path: /home/user/.m2
+
+    # Optional settings to limit the workspace resources
+
+      # cpuLimit: '4'
+      # cpuRequest: '1'
+      # memoryLimit: '8G'
+      # memoryRequest: '4G'
+
+      mountSources: true    # ALlow mounting volumes configured
+
+  - name: m2        # Name of the volume to be mounted and size
+    volume:
+      size: 1G
+
+
+commands:      # Optional       # Use this to pre configure commands to run with VScode extensions, instead of running in terminal
+  - id: 1-package
+    exec:
+      label: "1. Package the application"
+      component: tools    # Name of the component configured above chosen by developers
+      workingDir: ${PROJECTS_ROOT}/camel-with-quarkus   # ${PROJECTS_ROOT} = Default location of project when devworkspace starts
+      commandLine: "mvn package"
+      group:
+        kind: build
+        isDefault: true
+
+  - id: 2-startdev
+    exec:
+      label: "2. Start Development mode (Hot reload + debug)"
+      component: tools
+      workingDir: ${PROJECTS_ROOT}/camel-with-quarkus
+      commandLine: "mvn compile quarkus:dev"
+      group:
+        kind: run
+        isDefault: true
